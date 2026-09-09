@@ -14,8 +14,15 @@ class Tracker(object):
         self.frame_id = 0
         self.counter = TrackCounter()
 
-        # Set global motion compensation model
-        self.cmc = CMC(vid_name)
+        # Set global motion compensation model. args.cmc_enabled=False skips it
+        # entirely (fixed-camera dataset, no GMC file) -- see trackers/cmc.py.
+        self.cmc = CMC(vid_name, enabled=getattr(args, 'cmc_enabled', True))
+
+        # Association cost-term weights (w_cos=0 turns the appearance term off).
+        self.assoc_w = dict(w_iou=getattr(args, 'w_iou', 0.50),
+                            w_cos=getattr(args, 'w_cos', 0.50),
+                            w_conf=getattr(args, 'w_conf', 0.10),
+                            w_angle=getattr(args, 'w_angle', 0.05))
 
     def init_tracks(self, dets):
         # Get alive tracks, iou_similarity, and scores
@@ -64,7 +71,7 @@ class Tracker(object):
         dets = dets_high + dets_low + dets_del_high
         matches, u_tracks, u_dets = iterative_assignment(tracked_lost, dets_high, dets_low, dets_del_high,
                                                          self.args.match_thr, self.args.penalty_p, self.args.penalty_q,
-                                                         self.args.reduce_step, self.frame_id)
+                                                         self.args.reduce_step, self.frame_id, **self.assoc_w)
 
         # Update matched tracks
         for t, d in matches:
@@ -81,7 +88,7 @@ class Tracker(object):
         # Association between (new tracks) & (left high confidence detections)
         matches, u_tracks, u_dets = iterative_assignment(new, dets_high_left, [], [], self.args.match_thr,
                                                          self.args.penalty_p, self.args.penalty_q,
-                                                         self.args.reduce_step, self.frame_id)
+                                                         self.args.reduce_step, self.frame_id, **self.assoc_w)
 
         # Update matched tracks
         for t, d in matches:

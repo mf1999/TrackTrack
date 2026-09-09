@@ -66,6 +66,11 @@ class Track(BaseTrack):
         self.feat = detection[6:][np.newaxis, :].copy()
 
     def update_features(self, feat, score):
+        # No appearance axis (zero-width feature vector): nothing to update, and
+        # the L2 normalization below would divide by zero.
+        if self.feat.shape[-1] == 0:
+            return
+
         # Update and normalize
         beta = self.alpha + (1 - self.alpha) * (1 - score)
         self.feat = beta * self.feat + (1 - beta) * feat
@@ -89,7 +94,13 @@ class Track(BaseTrack):
 
     def predict(self):
         # Zero out the velocity of w and h when track is lost or new.
-        if self.state != TrackState.Tracked and 'Dance' in self.args.data_path:
+        # Upstream selects this by testing the dataset path for 'Dance'; an
+        # explicit args.zero_wh_vel_when_lost overrides that so the tracker can
+        # be driven on a dataset that has no args.data_path at all.
+        zero_wh_vel = getattr(self.args, 'zero_wh_vel_when_lost', None)
+        if zero_wh_vel is None:
+            zero_wh_vel = 'Dance' in getattr(self.args, 'data_path', '')
+        if self.state != TrackState.Tracked and zero_wh_vel:
             self.mean[6] = 0
             self.mean[7] = 0
 

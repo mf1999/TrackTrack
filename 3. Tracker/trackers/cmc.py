@@ -3,8 +3,17 @@ import numpy as np
 
 
 class CMC:
-    def __init__(self, vid_name):
+    def __init__(self, vid_name, enabled=True):
         super(CMC, self).__init__()
+
+        # Fixed-camera datasets have no global camera motion to compensate for,
+        # and ship no precomputed GMC-<seq>.txt file. With enabled=False the
+        # warp matrix is always the identity, which makes apply_cmc() an exact
+        # no-op instead of a crash on a missing file.
+        self.enabled = enabled
+        if not enabled:
+            self.gmcFile = None
+            return
 
         if 'MOT17' in vid_name:
             vid_name = vid_name.split('-FRCNN')[0]
@@ -14,6 +23,9 @@ class CMC:
         self.gmcFile = open('./trackers/cmc/' + 'GMC-' + vid_name + ".txt", 'r')
 
     def get_warp_matrix(self):
+        if not self.enabled:
+            return np.eye(2, 3, dtype=np.float64)
+
         line = self.gmcFile.readline()
         tokens = line.split("\t")
         warp_matrix = np.eye(2, 3, dtype=np.float_)

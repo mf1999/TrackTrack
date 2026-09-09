@@ -191,18 +191,22 @@ def associate(cost, match_thr):
 
 
 def iterative_assignment(tracks, dets_high, dets_low, dets_del_high, match_thr, penalty_p, penalty_q,
-                        reduce_step, frame_id, d_t=3):
+                        reduce_step, frame_id, d_t=3,
+                        w_iou=0.50, w_cos=0.50, w_conf=0.10, w_angle=0.05):
     # Initialization
     matches = []
     dets = dets_high + dets_low + dets_del_high
 
     # Calculate preliminaries
     iou_sim, iou_dist = iou_distance(tracks, dets)
-    cos_dist = cos_distance(tracks, dets)
 
-    # Calculate cost
-    cost = 0.50 * iou_dist + 0.50 * cos_dist
-    cost += 0.10 * conf_distance(tracks, dets) + 0.05 * angle_distance(tracks, dets, frame_id, d_t)
+    # Calculate cost. w_cos=0 disables the appearance term outright (no ReID
+    # backbone); the IoU weight is then expected to absorb it, so the weights
+    # stay caller-supplied rather than hard-coded.
+    cost = w_iou * iou_dist
+    if w_cos > 0:
+        cost = cost + w_cos * cos_distance(tracks, dets)
+    cost += w_conf * conf_distance(tracks, dets) + w_angle * angle_distance(tracks, dets, frame_id, d_t)
 
     # Give penalty
     cost[:, len(dets_high):len(dets_high + dets_low)] += penalty_p
