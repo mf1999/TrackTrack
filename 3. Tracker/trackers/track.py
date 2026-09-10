@@ -55,14 +55,17 @@ class Track(BaseTrack):
         self.score = detection[4]
 
         # Initialize 2
-        self.delta_t = 3
+        # Upstream hard-codes delta_t=3 (frames back used to estimate the corner
+        # velocity) and alpha=0.95 (the appearance EMA rate). Both are read from
+        # args here so a study can fit them; the defaults are upstream's values.
+        self.delta_t = getattr(args, 'delta_t', 3)
         self.history = {}
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.velocity = np.zeros((4, 2))
 
         # Initialize 3
-        self.alpha = 0.95
+        self.alpha = getattr(args, 'feat_alpha', 0.95)
         self.feat = detection[6:][np.newaxis, :].copy()
 
     def update_features(self, feat, score):
@@ -81,7 +84,9 @@ class Track(BaseTrack):
         self.track_id = counter.get_track_id()
 
         # Initiate Kalman filter
-        self.kalman_filter = KalmanFilter()
+        self.kalman_filter = KalmanFilter(
+            std_pos=getattr(self.args, 'kf_std_pos', 1. / 20.),
+            std_vel=getattr(self.args, 'kf_std_vel', 1. / 160.))
         self.mean, self.covariance = self.kalman_filter.initiate(self.cxcywh.copy())
 
         # Initiate history

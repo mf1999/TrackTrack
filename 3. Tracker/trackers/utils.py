@@ -191,7 +191,7 @@ def associate(cost, match_thr):
 
 
 def iterative_assignment(tracks, dets_high, dets_low, dets_del_high, match_thr, penalty_p, penalty_q,
-                        reduce_step, frame_id, d_t=3,
+                        reduce_step, frame_id, d_t=3, iou_gate=0.10,
                         w_iou=0.50, w_cos=0.50, w_conf=0.10, w_angle=0.05):
     # Initialization
     matches = []
@@ -213,7 +213,11 @@ def iterative_assignment(tracks, dets_high, dets_low, dets_del_high, match_thr, 
     cost[:, len(dets_high + dets_low):] += penalty_q
 
     # Constraint & Clip
-    cost[iou_sim <= 0.10] = 1.
+    # iou_gate is the hard proximity gate: a track/detection pair overlapping by
+    # no more than this can never be matched, whatever the other three cost terms
+    # say. Upstream hard-codes 0.10; it is caller-supplied here so a study can fit
+    # it, and 0.10 remains the default.
+    cost[iou_sim <= iou_gate] = 1.
     cost = np.clip(cost, 0, 1)
 
     # # Linear assignment

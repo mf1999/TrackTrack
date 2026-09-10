@@ -3,7 +3,7 @@ import scipy.linalg
 
 
 class KalmanFilter(object):
-    def __init__(self):
+    def __init__(self, std_pos=1. / 20., std_vel=1. / 160.):
         # Set dim
         self.dim_x = 8
         self.dim_z = 4
@@ -19,8 +19,11 @@ class KalmanFilter(object):
         # Motion and observation uncertainty are chosen relative to the current
         # state estimate. These weights control the amount of uncertainty in
         # the model. This is a bit hacky.
-        self.std_pos = 1. / 20.
-        self.std_vel = 1. / 160.
+        # Upstream hard-codes 1/20 and 1/160, tuned for MOT17 pedestrians. They
+        # are constructor arguments here so a study can fit them to another
+        # dataset's dynamics; the defaults are the upstream values.
+        self.std_pos = std_pos
+        self.std_vel = std_vel
 
         # Set motion covariance
         self.motion_cov = np.eye(self.dim_x)

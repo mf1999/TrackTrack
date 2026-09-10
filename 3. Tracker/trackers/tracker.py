@@ -18,11 +18,15 @@ class Tracker(object):
         # entirely (fixed-camera dataset, no GMC file) -- see trackers/cmc.py.
         self.cmc = CMC(vid_name, enabled=getattr(args, 'cmc_enabled', True))
 
-        # Association cost-term weights (w_cos=0 turns the appearance term off).
+        # Association cost-term weights (w_cos=0 turns the appearance term off),
+        # plus the two association constants upstream hard-codes inside
+        # iterative_assignment: the proximity gate and the velocity lookback.
         self.assoc_w = dict(w_iou=getattr(args, 'w_iou', 0.50),
                             w_cos=getattr(args, 'w_cos', 0.50),
                             w_conf=getattr(args, 'w_conf', 0.10),
-                            w_angle=getattr(args, 'w_angle', 0.05))
+                            w_angle=getattr(args, 'w_angle', 0.05),
+                            iou_gate=getattr(args, 'iou_gate', 0.10),
+                            d_t=getattr(args, 'delta_t', 3))
 
     def init_tracks(self, dets):
         # Get alive tracks, iou_similarity, and scores
